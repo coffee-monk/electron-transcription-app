@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script
+      src="https://cdn.socket.io/4.2.0/socket.io.min.js"
+      integrity="sha384-PiBR5S00EtOj2Lto9Uu81cmoyZqR57XcOna1oAuVuIEjzj0wpqDVfD0JA9eXlRsj"
+      crossorigin="anonymous"
+    ></script>
+    <style>
+      * {
+        margin: 0px;
+        padding: 0px;
+      }
+
+      body {
+        height: 100vh;
+        width: 100vw;
+        margin: 0;
+        border: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+      }
+
+      .main-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        background-color: #333;
+        border-radius: 15px;
+      }
+
+      .text-output-container {
+        height: calc(100% - 10px);
+        width: calc(100% - 10px);
+        background-color: black;
+        color: seashell;
+        border-radius: 15px;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        border-right: 1px solid #333;
+      }
+
+      #text-output {
+        height: calc(100% - 20px);
+        width: calc(100% - 20px);
+        margin: 0 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        font-family: "Arial", "Helvetica";
+        font-size: 2rem;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 15px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+
+      /* === Context Menu === */
+      .overlay {
+        height: 100%;
+        width: 100%;
+        position: fixed;
+        z-index: 1;
+        top: 0;
+        left: 0;
+        background-color: #333;
+        display: none;
+        flex-direction: column;
+        justify-content: space-around;
+        align-items: center;
+      }
+
+      .overlay-content {
+        position: relative;
+        text-align: center;
+      }
+
+      .overlay h5 {
+        padding: 8px;
+        text-decoration: none;
+        font-size: 36px;
+        color: #818181;
+        display: block;
+        transition: 0.3s;
+        cursor: pointer;
+      }
+
+      .overlay h5:hover {
+        color: #444;
+      }
+
+      .overlay .closebtn {
+        position: absolute;
+        top: 20px;
+        right: 40px;
+        font-size: 60px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-container">
+      <div class="text-output-container">
+        <div id="text-output"></div>
+      </div>
+    </div>
+
+    <div class="overlay">
+      <h5 class="closebtn">X</h5>
+      <div class="overlay-content">
+        <h5>About</h5>
+        <h5>Services</h5>
+        <h5>Clients</h5>
+      </div>
+    </div>
+
+    <script>
+      // Screen ===========================================
+      let textOutput = document.querySelector("#text-output")
+      let scrollHeight = textOutput.scrollHeight
+      textOutput.scrollTo(0, scrollHeight)
+
+      textOutput.addEventListener("scroll", e => {
+        scrollHeight = e.target.scrollTop
+      })
+
+      // IPCRenderer + SocketIO
+      const electron = require("electron")
+      const { ipcRenderer } = electron
+
+      // IPCRenderer
+      ipcRenderer.on("room:data", (e, room) => {
+        // Socket
+        const socket = io("http://localhost:3000", {
+          query: {
+            room: room,
+            mode: "output",
+          },
+        })
+
+        socket.on("test", data => {
+          textOutput.innerHTML = data.textUpdate
+          console.log(data.textUpdate)
+          console.log("test2")
+        })
+
+        socket.on("output", text => {
+          textOutput.innerHTML = ""
+          textOutput.innerHTML = text.output
+
+          // scroll to bottom for new lines printed
+          if (
+            Math.round(scrollHeight) + textOutput.clientHeight >=
+            textOutput.scrollHeight - 1
+          ) {
+            scrollHeight = textOutput.scrollHeight
+          }
+          textOutput.scrollTo(0, scrollHeight)
+        })
+
+        // alert user if connection is lost
+        socket.on("disconnect", () => {
+          alert("No Connection to Server: Reload Page & Check Room-Name")
+        })
+      })
+
+      // Context Menu =====================================
+      const overlay = document.querySelector(".overlay")
+      const close = document.querySelector(".closebtn")
+
+      window.addEventListener("contextmenu", e => {
+        event.preventDefault()
+        overlay.style.display = "flex"
+      })
+      close.addEventListener("click", e => {
+        overlay.style.display = "none"
+      })
+    </script>
+  </body>
+</html>
